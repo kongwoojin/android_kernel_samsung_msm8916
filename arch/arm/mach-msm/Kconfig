@@ -1227,6 +1227,27 @@ config MACH_ROSSA_VZW
 	help
 	  Support for Samsung ROSSA Verizon device.
 
+config SEC_GRANDMAX_PROJECT
+	depends on ARCH_MSM8916
+		default n
+		bool "Samsung GRANDMAX Project"
+		help
+		  Support for Samsung GRANDMAX Project
+
+config MACH_GRANDMAX_CHN_OPEN
+	depends on SEC_GRANDMAX_PROJECT
+		default n
+		bool "Samsung GRANDMAX China Open"
+		help
+		  Support for Samsung GRANDMAX China Open device.
+
+config MACH_GRANDMAX_KOR_OPEN
+	depends on SEC_GRANDMAX_PROJECT
+		default n
+		bool "Samsung GRANDMAX Korea Open"
+		help
+		  Support for Samsung GRANDMAX Korea Open device.
+
 config SEC_XCOVER3_PROJECT
     depends on ARCH_MSM8916
 	default n

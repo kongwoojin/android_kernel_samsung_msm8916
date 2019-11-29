@@ -88,11 +88,15 @@
 #define CTRL1_BDU_MASK                0x08
 
 /* CTRL2 */
+#ifdef CONFIG_MACH_GRANDMAX_KOR_OPEN
+#define CTRL2_IG1_INT1                0x08
+#else
 #define CTRL2_DFC_MASK                0x60
 #define CTRL2_DFC_50				  0x00
 #define CTRL2_DFC_100				  0x20
 #define CTRL2_DFC_9					  0x40
 #define CTRL2_DFC_400				  0x60
+#endif
 
 /* CTRL3 */
 #define CTRL3_IG1_INT1                0x08
@@ -226,7 +230,7 @@ const struct k2hh_acc_odr k2hh_acc_odr_table[] = {
 #endif
 };
 
-#ifdef CONFIG_MACH_J1_VZW
+#if defined(CONFIG_MACH_J1_VZW) || defined(CONFIG_MACH_GRANDMAX_KOR_OPEN)
 static int k2hh_regulator_onoff(struct k2hh_p *data, bool onoff);
 #endif
 
@@ -1586,6 +1590,10 @@ static int k2hh_remove(struct i2c_client *client)
 	cancel_delayed_work_sync(&data->irq_work);
 	wake_lock_destroy(&data->reactive_wake_lock);
 	gpio_free(data->acc_int1);
+
+#ifdef CONFIG_MACH_GRANDMAX_KOR_OPEN
+	k2hh_regulator_onoff(data, false);
+#endif
 
 	kfree(data);
 

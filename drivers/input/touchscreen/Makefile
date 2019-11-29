@@ -107,3 +107,4 @@ obj-$(CONFIG_TOUCHSCREEN_IST30XXC_CMCS) += imagis_30xxc_cmcs/
 obj-$(CONFIG_TOUCHSCREEN_SEC_TS)	+= sec_ts/
 obj-$(CONFIG_TOUCHSCREEN_MXT336S) += atmel_mxt/
 obj-$(CONFIG_TOUCHSCREEN_BT432_TS)	+= zinitix_bt432/
+obj-$(CONFIG_TOUCHSCREEN_IST30XX_O1)	+= imagis_o1/
