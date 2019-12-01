@@ -70,33 +70,19 @@
 /* Intelligent Cancelation*/
 #define CM36686_CANCELATION
 #ifdef CM36686_CANCELATION
-#ifdef CONFIG_MACH_GRANDMAX_KOR_OPEN
-#define CANCELATION_FILE_PATH	"/efs/prox_cal"
-#define CAL_SKIP_ADC	5
-#define CAL_FAIL_ADC	15
-#else
 #define CANCELATION_FILE_PATH	"/efs/FactoryApp/prox_cal"
 #define CAL_SKIP_ADC	9
 #define CAL_FAIL_ADC	22
-#endif
 #endif
 
 #define PROX_READ_NUM		40
 
  /* proximity sensor threshold */
-#ifdef CONFIG_MACH_GRANDMAX_KOR_OPEN
-#define DEFUALT_HI_THD		0x0022
-#define DEFUALT_LOW_THD		0x001E
-#define CANCEL_HI_THD		0x0022
-#define CANCEL_LOW_THD		0x001E
-#define DEFAULT_TRIM		0x0000
-#else
 #define DEFUALT_HI_THD		0x0015
 #define DEFUALT_LOW_THD		0x000F
 #define CANCEL_HI_THD		0x000F
 #define CANCEL_LOW_THD		0x000A
 #define DEFAULT_TRIM		0x0005
-#endif
 
  /*lightsnesor log time 6SEC 200mec X 30*/
 #define LIGHT_LOG_TIME		30
@@ -126,13 +112,8 @@ enum {
 };
 
 static u16 ps_reg_init_setting[PS_REG_NUM][2] = {
-#ifdef CONFIG_MACH_GRANDMAX_KOR_OPEN
-	{REG_PS_CONF1, 0x0324},	/* REG_PS_CONF1 */
-	{REG_PS_CONF3, 0x4200},	/* REG_PS_CONF3 */
-#else
 	{REG_PS_CONF1, 0x03A4},	/* REG_PS_CONF1 */
 	{REG_PS_CONF3, 0x4210},	/* REG_PS_CONF3 */
-#endif
 	{REG_PS_THD_LOW, DEFUALT_LOW_THD},	/* REG_PS_THD_LOW */
 	{REG_PS_THD_HIGH, DEFUALT_HI_THD},	/* REG_PS_THD_HIGH */
 	{REG_PS_CANC, DEFAULT_TRIM},	/* REG_PS_CANC */
@@ -165,11 +146,6 @@ struct cm36686_data {
 	int count_log_time;
 	unsigned int uProxCalResult;
 };
-
-
-#if defined(CONFIG_SENSORS_CM36686_LEDA_EN_GPIO)
-static int cm36686_leden_gpio_onoff(struct cm36686_data *cm36686, bool onoff);
-#endif
 
 int cm36686_i2c_read_word(struct cm36686_data *cm36686, u8 command, u16 *val)
 {
@@ -299,16 +275,10 @@ static ssize_t light_enable_store(struct device *dev,
 	pr_info("[SENSOR] %s,new_value=%d\n", __func__, new_value);
 	if (new_value && !(cm36686->power_state & LIGHT_ENABLED)) {
 		cm36686->power_state |= LIGHT_ENABLED;
-#if defined(CONFIG_SENSORS_CM36686_LEDA_EN_GPIO)
-		cm36686_leden_gpio_onoff(cm36686, 1);
-#endif
 		cm36686_light_enable(cm36686);
 	} else if (!new_value && (cm36686->power_state & LIGHT_ENABLED)) {
 		cm36686_light_disable(cm36686);
 		cm36686->power_state &= ~LIGHT_ENABLED;
-#if defined(CONFIG_SENSORS_CM36686_LEDA_EN_GPIO)
-		cm36686_leden_gpio_onoff(cm36686, 0);
-#endif
 	}
 	mutex_unlock(&cm36686->power_lock);
 	return size;
@@ -525,25 +495,11 @@ static ssize_t proximity_cancel_store(struct device *dev,
 static ssize_t proximity_cancel_show(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
-	struct cm36686_data *cm36686 = dev_get_drvdata(dev);
 	return snprintf(buf, PAGE_SIZE, "%u,%u,%u\n",
-		(ps_reg_init_setting[PS_CANCEL][CMD] > cm36686->pdata->trim)
-		? ps_reg_init_setting[PS_CANCEL][CMD] - cm36686->pdata->trim
-		: ps_reg_init_setting[PS_CANCEL][CMD],
+		ps_reg_init_setting[PS_CANCEL][CMD],
 		ps_reg_init_setting[PS_THD_HIGH][CMD],
 		ps_reg_init_setting[PS_THD_LOW][CMD]);
 }
-
-#ifdef CONFIG_MACH_GRANDMAX_KOR_OPEN
-static ssize_t proximity_trim_show(struct device *dev,
-	struct device_attribute *attr, char *buf)
-{
-	struct cm36686_data *cm36686 = dev_get_drvdata(dev);
-
-	pr_info("%s, %u\n", __func__, cm36686->pdata->trim);
-	return snprintf(buf, PAGE_SIZE, "%u\n", cm36686->pdata->trim);
-}
-#endif
 
 static ssize_t proximity_cancel_pass_show(struct device *dev,
 	struct device_attribute *attr, char *buf)
@@ -574,16 +530,6 @@ static int cm36686_setup_leden_gpio(struct cm36686_data *cm36686)
 static int cm36686_leden_gpio_onoff(struct cm36686_data *cm36686, bool onoff)
 {
 	struct cm36686_platform_data *pdata = cm36686->pdata;
-#ifdef CONFIG_MACH_GRANDMAX_KOR_OPEN
-	if (!onoff &&
-		(cm36686->power_state & LIGHT_ENABLED
-		|| cm36686->power_state & PROXIMITY_ENABLED)) {
-		pr_info("%s onoff:%d, other sensor is in use.(%d)\n",
-			__func__, onoff, cm36686->power_state);
-		return 0;
-	}
-#endif
-
 	gpio_set_value(pdata->leden_gpio, onoff);
 	pr_info("%s onoff:%d\n", __func__, onoff);
 	if (onoff)
@@ -616,7 +562,7 @@ static ssize_t proximity_enable_store(struct device *dev,
 		int err = 0;
 
 		cm36686->power_state |= PROXIMITY_ENABLED;
-#if defined(CONFIG_SENSORS_CM36686_LEDA_EN_GPIO)
+#if 0//defined(CONFIG_SENSORS_CM36686_LEDA_EN_GPIO)
 		cm36686_leden_gpio_onoff(cm36686, 1);
 #endif
 #ifdef CM36686_CANCELATION
@@ -650,7 +596,7 @@ static ssize_t proximity_enable_store(struct device *dev,
 		disable_irq(cm36686->irq);
 		/* disable settings */
 		cm36686_i2c_write_word(cm36686, REG_PS_CONF1, 0x0001);
-#if defined(CONFIG_SENSORS_CM36686_LEDA_EN_GPIO)
+#if 0//defined(CONFIG_SENSORS_CM36686_LEDA_EN_GPIO)
 		cm36686_leden_gpio_onoff(cm36686, 0);
 #endif
 	}
@@ -719,7 +665,6 @@ static struct device_attribute dev_attr_light_sensor_name =
 	__ATTR(name, S_IRUSR | S_IRGRP, cm36686_name_show, NULL);
 
 /* proximity sysfs */
-#ifndef CONFIG_MACH_GRANDMAX_KOR_OPEN
 static ssize_t proximity_trim_show(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
@@ -727,7 +672,6 @@ static ssize_t proximity_trim_show(struct device *dev,
 
 	return snprintf(buf, PAGE_SIZE, "%u\n", cm36686->pdata->default_trim);
 }
-#endif
 
 static ssize_t proximity_avg_show(struct device *dev,
 	struct device_attribute *attr, char *buf)
@@ -757,7 +701,7 @@ static ssize_t proximity_avg_store(struct device *dev,
 	mutex_lock(&cm36686->power_lock);
 	if (new_value) {
 		if (!(cm36686->power_state & PROXIMITY_ENABLED)) {
-#if defined(CONFIG_SENSORS_CM36686_LEDA_EN_GPIO)
+#if 0//defined(CONFIG_SENSORS_CM36686_LEDA_EN_GPIO)
 			cm36686_leden_gpio_onoff(cm36686, 1);
 #endif
 			cm36686_i2c_write_word(cm36686, REG_PS_CONF1,
@@ -771,7 +715,7 @@ static ssize_t proximity_avg_store(struct device *dev,
 		if (!(cm36686->power_state & PROXIMITY_ENABLED)) {
 			cm36686_i2c_write_word(cm36686, REG_PS_CONF1,
 				0x0001);
-#if defined(CONFIG_SENSORS_CM36686_LEDA_EN_GPIO)
+#if 0//defined(CONFIG_SENSORS_CM36686_LEDA_EN_GPIO)
 		cm36686_leden_gpio_onoff(cm36686, 0);
 #endif
 		}
@@ -786,12 +730,10 @@ static ssize_t proximity_state_show(struct device *dev,
 {
 	struct cm36686_data *cm36686 = dev_get_drvdata(dev);
 	u16 ps_data;
-	bool is_forced_en = false;
 
 	mutex_lock(&cm36686->power_lock);
 	if (!(cm36686->power_state & PROXIMITY_ENABLED)) {
-		is_forced_en = true;
-#if defined(CONFIG_SENSORS_CM36686_LEDA_EN_GPIO)
+#if 0//defined(CONFIG_SENSORS_CM36686_LEDA_EN_GPIO)
 		cm36686_leden_gpio_onoff(cm36686, 1);
 #endif
 		pr_info("%s prox_led_on\n", __func__);
@@ -805,7 +747,7 @@ static ssize_t proximity_state_show(struct device *dev,
 
 	if (!(cm36686->power_state & PROXIMITY_ENABLED)) {
 		cm36686_i2c_write_word(cm36686, REG_PS_CONF1, 0x0001);
-#if defined(CONFIG_SENSORS_CM36686_LEDA_EN_GPIO)
+#if 0//defined(CONFIG_SENSORS_CM36686_LEDA_EN_GPIO)
 		cm36686_leden_gpio_onoff(cm36686, 0);
 #endif
 	}
@@ -1163,14 +1105,6 @@ static void cm36686_work_func_prox(struct work_struct *work)
 {
 	struct cm36686_data *cm36686 = container_of(work, struct cm36686_data,
 						  work_prox);
-
-#ifdef CONFIG_MACH_GRANDMAX_KOR_OPEN
-	if (!(cm36686->power_state & PROXIMITY_ENABLED)) {
-		pr_info("%s, proximity disabled.\n", __func__);
-		return;
-	}
-#endif
-
 	proxsensor_get_avg_val(cm36686);
 }
 
@@ -1275,16 +1209,7 @@ static int prox_regulator_onoff(struct device *dev, bool onoff)
 	} else if (!regulator_get_voltage(vdd)) {
 		ret = regulator_set_voltage(vdd, 2850000, 2850000);
 	}
-#ifdef CONFIG_MACH_GRANDMAX_KOR_OPEN
-	vio = devm_regulator_get(dev, "reg_vio");
-	if (IS_ERR(vio)) {
-		pr_err("%s: cannot get vio\n", __func__);
-		ret = -ENOMEM;
-		goto err_vio;
-	} else if (!regulator_get_voltage(vio)) {
-		ret = regulator_set_voltage(vio, 1800000, 1800000);
-	}
-#endif
+
 	if (onoff) {
 		ret = regulator_enable(vdd);
 		if (ret)
@@ -1302,6 +1227,7 @@ err_vdd:
 	return ret;
 }
 
+#if 0
 static int cm36686_pin_ctrl(struct device *dev)
 {
 	int ret;
@@ -1345,6 +1271,7 @@ exit:
 
 	return ret;
 }
+#endif
 
 static int cm36686_i2c_probe(struct i2c_client *client,
 	const struct i2c_device_id *id)
@@ -1387,9 +1314,6 @@ static int cm36686_i2c_probe(struct i2c_client *client,
 		kfree(cm36686);
 		return ret;
 	}
-
-	prox_regulator_onoff(&client->dev, 1);
-
 	cm36686->pdata = pdata;
 	cm36686->i2c_client = client;
 	i2c_set_clientdata(client, cm36686);
@@ -1431,11 +1355,9 @@ static int cm36686_i2c_probe(struct i2c_client *client,
 		goto err_setup_reg;
 	}
 
-#ifdef CONFIG_MACH_GRANDMAX_KOR_OPEN
-	cm36686_pin_ctrl(&client->dev);
-#endif
+	//cm36686_pin_ctrl(&client->dev);
 
-#if defined(CONFIG_SENSORS_CM36686_LEDA_EN_GPIO)
+#if 0//defined(CONFIG_SENSORS_CM36686_LEDA_EN_GPIO)
 	cm36686_leden_gpio_onoff(cm36686, 0);
 #endif
 

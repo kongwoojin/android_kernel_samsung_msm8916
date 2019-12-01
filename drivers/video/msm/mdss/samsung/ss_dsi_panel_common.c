@@ -809,6 +809,8 @@ struct dsi_panel_cmds *mdss_samsung_cmds_select(struct mdss_dsi_ctrl_pdata *ctrl
 			break;
 		case PANEL_CABC_OFF_DUTY:
 			cmds = &vdd->dtsi_data[ndx].cabc_off_duty_tx_cmds[vdd->panel_revision];
+		case PANEL_SLEEP_OUT:
+			cmds = &vdd->dtsi_data[ctrl->ndx].sleep_out_cmds[vdd->panel_revision];
 			break;
 		default:
 			pr_err("%s : unknown_command.. \n", __func__);
@@ -2802,6 +2804,16 @@ void mdss_samsung_panel_parse_dt_cmds(struct device_node *np,
 		snprintf(string, PARSE_STRING, "samsung,cabc_off_duty_tx_cmds_rev%c", panel_revision + rev_value);
 		if (mdss_samsung_parse_dcs_cmds(np, &vdd->dtsi_data[ndx].cabc_off_duty_tx_cmds[panel_revision], string, NULL) && panel_revision > 0)
 			memcpy(&vdd->dtsi_data[ndx].cabc_off_duty_tx_cmds[panel_revision], &vdd->dtsi_data[ndx].cabc_off_duty_tx_cmds[panel_revision - 1], sizeof(struct dsi_panel_cmds));
+
+		if(vdd->dtsi_data[ndx].sleep_out_command_enable)
+		{
+			snprintf(string, PARSE_STRING, "samsung,mdss_check_panel_status_cmds_rev%c", panel_revision + rev_value);
+			if (mdss_samsung_parse_dcs_cmds(np, &vdd->dtsi_data[ndx].panel_status_read_cmds[panel_revision], string, NULL) && panel_revision > 0)
+				memcpy(&vdd->dtsi_data[ndx].panel_status_read_cmds[panel_revision], &vdd->dtsi_data[ndx].panel_status_read_cmds[panel_revision - 1], sizeof(struct dsi_panel_cmds));
+			snprintf(string, PARSE_STRING, "samsung,mdss_sleep_out_cmds_rev%c", panel_revision + rev_value);
+			if (mdss_samsung_parse_dcs_cmds(np, &vdd->dtsi_data[ndx].sleep_out_cmds[panel_revision], string, "qcom,mdss-dsi-on-command-state") && panel_revision > 0)
+				memcpy(&vdd->dtsi_data[ndx].sleep_out_cmds[panel_revision], &vdd->dtsi_data[ndx].sleep_out_cmds[panel_revision - 1], sizeof(struct dsi_panel_cmds));
+		}
 	}
 }
 
@@ -2979,6 +2991,7 @@ void mdss_samsung_panel_parse_dt(struct device_node *np,
 {
 	int rc, i;
 	u32 tmp[2];
+	u32 result_tmp = 0;
 	char panel_extra_power_gpio[] = "samsung,panel-extra-power-gpio1";
 	char backlight_tft_gpio[] = "samsung,panel-backlight-tft-gpio1";
 	struct samsung_display_driver_data *vdd = check_valid_ctrl(ctrl);
@@ -3070,6 +3083,20 @@ void mdss_samsung_panel_parse_dt(struct device_node *np,
 	pr_info("%s: backlight_gpio_config %s\n", __func__,
 	vdd->dtsi_data[ctrl->ndx].backlight_gpio_config ? "enabled" : "disabled");
 
+	/* Factory Panel Swap*/
+	vdd->dtsi_data[ctrl->ndx].samsung_support_factory_panel_swap = of_property_read_bool(np,
+		"samsung,support_factory_panel_swap");
+
+	vdd->dtsi_data[ctrl->ndx].lcd_display_format_bgr  = of_property_read_bool(np,
+		"samsung,lcd-display-format-bgr");
+
+	vdd->dtsi_data[ctrl->ndx].sleep_out_command_enable = of_property_read_bool(np,
+		"samsung,mdss-sleep-out-command-enable");
+	if(vdd->dtsi_data[ctrl->ndx].sleep_out_command_enable)
+	{
+		rc = of_property_read_u32(np,"samsung,mdss-check-panel-status-result", &result_tmp);
+		vdd->dtsi_data[ctrl->ndx].check_panel_status_result = (!rc ? result_tmp : 0xff);
+	}
 	/* Set extra power gpio */
 	for (i = 0; i < MAX_EXTRA_POWER_GPIO; i++) {
 		panel_extra_power_gpio[strlen(panel_extra_power_gpio) - 1] = '1' + i;

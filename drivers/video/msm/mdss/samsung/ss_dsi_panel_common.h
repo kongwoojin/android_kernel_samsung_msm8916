@@ -122,6 +122,7 @@ enum mipi_samsung_cmd_list {
 	PANEL_HSYNC_ON,
 	PANEL_CABC_ON_DUTY,
 	PANEL_CABC_OFF_DUTY,
+	PANEL_SLEEP_OUT,
 };
 
 enum {
@@ -201,8 +202,13 @@ struct samsung_display_dtsi_data {
 	bool samsung_change_acl_by_brightness;
 	bool samsung_esc_clk_128M;
 	bool samsung_osc_te_fitting;
+	bool samsung_support_factory_panel_swap;
 	u32  samsung_power_on_reset_delay ;
 	u32  samsung_dsi_off_reset_delay;
+	char sleep_out_command_enable;
+	int check_panel_status_result;
+	struct dsi_panel_cmds sleep_out_cmds[SUPPORT_PANEL_REVISION];
+	struct dsi_panel_cmds panel_status_read_cmds[SUPPORT_PANEL_REVISION];
 	/*
 	 * index[0] : array index for te fitting command from "ctrl->on_cmd"
 	 * index[1] : array index for te fitting command from "osc_te_fitting_tx_cmds"
@@ -332,6 +338,7 @@ struct samsung_display_dtsi_data {
 	int pwm_ap_support;
 	const char *tft_module_name;
 	const char *panel_vendor;
+	int lcd_display_format_bgr;
 
 	/* MDINE HBM_CE_TEXT_MDNIE mode used */
 	int hbm_ce_text_mode_support;
@@ -408,6 +415,7 @@ struct panel_func {
 	int (*samsung_panel_on_post)(struct mdss_dsi_ctrl_pdata *ctrl);
 	int (*samsung_panel_off_pre)(struct mdss_dsi_ctrl_pdata *ctrl);
 	int (*samsung_panel_off_post)(struct mdss_dsi_ctrl_pdata *ctrl);
+	int (*samsung_panel_sleep_out)(struct mdss_dsi_ctrl_pdata *ctrl);
 	void (*samsung_backlight_late_on)(struct mdss_dsi_ctrl_pdata *ctrl);
 	void (*samsung_panel_init)(struct samsung_display_driver_data *vdd);
 

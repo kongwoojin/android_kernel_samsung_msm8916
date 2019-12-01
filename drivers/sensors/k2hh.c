@@ -139,7 +139,9 @@
 
 #define DYNAMIC_THRESHOLD             5000
 
+#ifndef CONFIG_MACH_GRANDMAX_KOR_OPEN
 #define ENABLE_LPF_CUT_OFF_FREQ		  1
+#endif
 #define ENABLE_LOG_ACCEL_MAX_OUT	  1
 #if defined(ENABLE_LOG_ACCEL_MAX_OUT)
 #define ACCEL_MAX_OUTPUT			  32760
