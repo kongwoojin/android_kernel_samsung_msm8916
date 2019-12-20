@@ -29,8 +29,10 @@
 #include <linux/workqueue.h>
 #include <soc/qcom/smd.h>
 #include <media/radio-iris.h>
+#ifndef CONFIG_MACH_GRANDMAX_KOR_OPEN
 #include <linux/wakelock.h>
 #include <linux/uaccess.h>
+#endif
 
 struct radio_data {
 	struct radio_hci_dev *hdev;
@@ -38,14 +40,18 @@ struct radio_data {
 	struct smd_channel  *fm_channel;
 };
 struct radio_data hs;
+#ifndef CONFIG_MACH_GRANDMAX_KOR_OPEN
 DEFINE_MUTEX(fm_smd_enable);
 static int fmsmd_set;
 static bool chan_opened;
 static int hcismd_fm_set_enable(const char *val, struct kernel_param *kp);
 module_param_call(fmsmd_set, hcismd_fm_set_enable, NULL, &fmsmd_set, 0644);
+#endif
 static struct work_struct *reset_worker;
+#ifndef CONFIG_MACH_GRANDMAX_KOR_OPEN
 static void radio_hci_smd_deregister(void);
 static void radio_hci_smd_exit(void);
+#endif
 
 static void radio_hci_smd_destruct(struct radio_hci_dev *hdev)
 {
@@ -170,11 +176,16 @@ static int radio_hci_smd_register_dev(struct radio_data *hsmd)
 	if (hdev == NULL)
 		return -ENODEV;
 
+#ifdef CONFIG_MACH_GRANDMAX_KOR_OPEN
+	hsmd->hdev = hdev;
+#endif
 	tasklet_init(&hsmd->rx_task, radio_hci_smd_recv_event,
 		(unsigned long) hsmd);
 	hdev->send  = radio_hci_smd_send_frame;
 	hdev->destruct = radio_hci_smd_destruct;
+#ifndef CONFIG_MACH_GRANDMAX_KOR_OPEN
 	hdev->close_smd = radio_hci_smd_exit;
+#endif
 
 	/* Open the SMD Channel and device and register the callback function */
 	rc = smd_named_open_on_edge("APPS_FM", SMD_APPS_WCNSS,
@@ -197,23 +208,32 @@ static int radio_hci_smd_register_dev(struct radio_data *hsmd)
 		return -ENODEV;
 	}
 
+#ifndef CONFIG_MACH_GRANDMAX_KOR_OPEN
 	hsmd->hdev = hdev;
+#endif
 	return 0;
 }
 
 static void radio_hci_smd_deregister(void)
 {
+#ifndef CONFIG_MACH_GRANDMAX_KOR_OPEN
 	radio_hci_unregister_dev();
 	kfree(hs.hdev);
 	hs.hdev = NULL;
+#endif
 
 	smd_close(hs.fm_channel);
 	hs.fm_channel = 0;
+#ifndef CONFIG_MACH_GRANDMAX_KOR_OPEN
 	fmsmd_set = 0;
+#endif
 }
 
 static int radio_hci_smd_init(void)
 {
+#ifdef CONFIG_MACH_GRANDMAX_KOR_OPEN
+	return radio_hci_smd_register_dev(&hs);
+#else
 	int ret;
 
 	if (chan_opened) {
@@ -230,20 +250,34 @@ static int radio_hci_smd_init(void)
 	}
 	chan_opened = true;
 	return ret;
+#endif
 }
-
+#ifdef CONFIG_MACH_GRANDMAX_KOR_OPEN
+module_init(radio_hci_smd_init);
+static void __exit radio_hci_smd_exit(void)
+#else
 static void radio_hci_smd_exit(void)
+#endif
 {
+#ifndef CONFIG_MACH_GRANDMAX_KOR_OPEN
 	if (!chan_opened) {
 		FMDBG("Channel already closed");
 		return;
 	}
+#endif
 
 	/* this should be called with fm_smd_enable lock held */
 	radio_hci_smd_deregister();
+#ifndef CONFIG_MACH_GRANDMAX_KOR_OPEN
 	chan_opened = false;
+#endif
 }
 
+#ifdef CONFIG_MACH_GRANDMAX_KOR_OPEN
+module_exit(radio_hci_smd_exit);
+#endif
+
+#ifndef CONFIG_MACH_GRANDMAX_KOR_OPEN
 static int hcismd_fm_set_enable(const char *val, struct kernel_param *kp)
 {
 	int ret = 0;
@@ -267,5 +301,8 @@ done:
 	return ret;
 }
 MODULE_DESCRIPTION("FM SMD driver");
+#else
+MODULE_DESCRIPTION("Bluetooth SMD driver");
+#endif
 MODULE_AUTHOR("Ankur Nandwani <ankurn@codeaurora.org>");
 MODULE_LICENSE("GPL v2");

@@ -78,7 +78,9 @@ static void radio_hci_cmd_task(unsigned long arg);
 static void radio_hci_rx_task(unsigned long arg);
 static struct video_device *video_get_dev(void);
 static DEFINE_RWLOCK(hci_task_lock);
+#ifndef CONFIG_MACH_GRANDMAX_KOR_OPEN
 extern struct mutex fm_smd_enable;
+#endif
 
 typedef int (*radio_hci_request_func)(struct radio_hci_dev *hdev,
 		int (*req)(struct
@@ -5467,7 +5469,11 @@ static int iris_fops_release(struct file *file)
 		return -EINVAL;
 
 	if (radio->mode == FM_OFF)
+#ifdef CONFIG_MACH_GRANDMAX_KOR_OPEN
+		return 0;
+#else
 		goto END;
+#endif
 
 	if (radio->mode == FM_RECV) {
 		radio->is_fm_closing = 1;
@@ -5487,11 +5493,13 @@ static int iris_fops_release(struct file *file)
 		radio->mode = FM_OFF;
 		return retval;
 	}
+#ifndef CONFIG_MACH_GRANDMAX_KOR_OPEN
 END:
 	mutex_lock(&fm_smd_enable);
 	if (radio->fm_hdev != NULL)
 		radio->fm_hdev->close_smd();
 	mutex_unlock(&fm_smd_enable);
+#endif
 
 	if (retval < 0)
 		FMDERR("Err on disable FM %d\n", retval);
